@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050505"><title>X EYE Share Screen</title><link rel="stylesheet" href="/style.css"></head><body><canvas id="rain"></canvas><script>
+(()=>{const c=document.getElementById('rain'),x=c.getContext('2d');let w,h,d,fs=17;
+function size(){let r=devicePixelRatio||1;w=innerWidth;h=innerHeight;c.width=w*r;c.height=h*r;c.style.width=w+'px';c.style.height=h+'px';x.setTransform(r,0,0,r,0,0);d=Array(Math.ceil(w/fs)).fill(0).map(()=>Math.random()*-h/fs)}
+function draw(){x.fillStyle='rgba(5,5,5,.12)';x.fillRect(0,0,w,h);x.font=fs+'px monospace';d.forEach((v,i)=>{x.fillStyle=Math.random()>.9?'#ff5555':'#a90000';x.fillText(Math.random()>.5?'1':'0',i*fs,v*fs);if(v*fs>h&&Math.random()>.975)d[i]=0;else d[i]+=.8})}
+size();addEventListener('resize',size);setInterval(draw,50)})();
+</script>
+<div class="wrap"><div class="top"><div class="brand">X <span>EYE</span></div><div class="status">SCREEN SHARE INVITE</div></div>
+<section class="box"><div class="muted">02 / PARTICIPANT CONSENT</div><h1>SHARE YOUR <em>SCREEN</em></h1>
+<p>You are about to share your screen live with the X EYE owner. Only continue if you trust the person who sent you this link. Your browser will show a system permission prompt.</p>
+<p class="warning">Sharing is optional. You can stop at any time using your browser/device sharing controls or the button below. This page cannot start sharing silently.</p>
+<div class="row"><button id="start">START SCREEN SHARING</button><button id="stop" class="alt" disabled>STOP SHARING</button></div><div id="msg"></div></section></div><footer>X EYE // YOU STAY IN CONTROL</footer>
+<script src="/socket.io/socket.io.js"></script><script>
+const $=id=>document.getElementById(id),msg=t=>$('msg').textContent=t;
+const roomId=new URLSearchParams(location.search).get('room');let socket=null,pc=null,stream=null;
+$('start').onclick=async()=>{
+ if(!roomId){msg('This invite link is invalid.');return}
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){msg('This browser does not support screen sharing here. Try a supported desktop browser or a compatible Android browser.');return}
+ try{
+  stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+  $('start').disabled=true;$('stop').disabled=false;msg('Screen sharing is active. Connecting securely…');
+  socket=io({auth:{role:'viewer',roomId}});
+  socket.on('connect_error',e=>{msg('Could not connect: '+e.message);stopAll()});
+  socket.on('peer-ready',()=>{});
+  socket.on('signal',async m=>{try{if(m.type==='answer'&&pc)await pc.setRemoteDescription(m.sdp);else if(m.type==='ice'&&pc)await pc.addIceCandidate(m.candidate)}catch(e){msg('Connection issue: '+e.message)}});
+  socket.on('connect',async()=>{pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});stream.getTracks().forEach(t=>pc.addTrack(t,stream));pc.onicecandidate=e=>{if(e.candidate)socket.emit('signal',{type:'ice',candidate:e.candidate})};let offer=await pc.createOffer();await pc.setLocalDescription(offer);socket.emit('signal',{type:'offer',sdp:pc.localDescription})});
+  stream.getVideoTracks()[0].addEventListener('ended',stopAll);
+ }catch(e){msg('Screen sharing was cancelled or unavailable: '+e.message);stopAll()}
+};
+function stopAll(){if(stream)stream.getTracks().forEach(t=>t.stop());if(pc)pc.close();if(socket)socket.disconnect();stream=null;pc=null;socket=null;$('start').disabled=false;$('stop').disabled=true;msg('Screen sharing stopped.')}
+$('stop').onclick=stopAll;
+</script></body></html>

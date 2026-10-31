@@ -1,0 +1,13 @@
+{
+  "name": "x-eye-consent-screen-share",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Consent-based live screen sharing for X EYE",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
